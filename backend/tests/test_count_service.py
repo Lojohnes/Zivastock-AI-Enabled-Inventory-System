@@ -1,122 +1,106 @@
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.models.base import Base
-from app.models.user import User
-from app.models.role import Role
+from sqlalchemy.orm import Session
+
+from app.models.location import Location, Shelf, ShelfSection
 from app.models.product import Product
-from app.models.location import Location, Shelf, Section
+from app.models.role import Role
 from app.models.session import StocktakeSession
+from app.models.user import User
+from app.schemas.count import FirstCountCreate
 from app.services.count_service import CountService
-from app.schemas.count import CountCreate
 
 
-@pytest.fixture
-def db_session():
-    engine = create_engine("sqlite:///:memory:")
-    TestingSessionLocal = sessionmaker(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
-    yield session
-    session.close()
-
-
-@pytest.fixture
-def count_service(db_session):
-    return CountService(db_session)
-
-
-def seed_data(session):
+def seed_data(session: Session):
     role = Role(name="Counter", description="Stock counter")
     session.add(role)
-    session.commit()
+    session.flush()
 
     user = User(
         email="counter@example.com",
-        hashed_password="secret",
+        password_hash="secret",
         first_name="Test",
         last_name="Counter",
         role_id=role.id,
         is_active=True,
     )
-    session.add(user)
-
-    location = Location(name="Warehouse", type="warehouse", description="Main warehouse")
-    session.add(location)
-    session.commit()
+    location = Location(name="Warehouse", type="warehouse", address="Main warehouse")
+    session.add_all([user, location])
+    session.flush()
 
     shelf = Shelf(name="Shelf A", location_id=location.id)
     session.add(shelf)
-    session.commit()
+    session.flush()
 
-    section = Section(name="A1", shelf_id=shelf.id)
-    session.add(section)
-
+    section = ShelfSection(name="A1", shelf_id=shelf.id)
     product = Product(
         barcode="123456",
         product_code="P001",
         description="Test Product",
-        unit_of_measure="each",
+        unit_of_measure="EA",
         system_quantity=100.0,
         unit_cost=10.0,
     )
-    session.add(product)
-    session.commit()
+    session.add_all([section, product])
+    session.flush()
 
-    stock_session = StocktakeSession(name="Cycle 1", location_id=location.id, created_by=user.id)
+    stock_session = StocktakeSession(
+        name="Cycle 1",
+        location_id=location.id,
+        created_by=user.id,
+    )
     session.add(stock_session)
     session.commit()
-
     return user, product, section, stock_session
 
 
-def test_create_count(count_service, db_session):
-    user, product, section, stock_session = seed_data(db_session)
-    count_data = CountCreate(
-        product_id=product.id,
-        section_id=section.id,
-        quantity=95.0,
-        session_id=stock_session.id,
+def create_first_count(service, product, section, stock_session, user, quantity=95):
+    return service.create_first_count(
+        FirstCountCreate(
+            product_id=product.id,
+            shelf_section_id=section.id,
+            quantity=quantity,
+            session_id=stock_session.id,
+            source="web",
+        ),
+        user.id,
     )
-    count = count_service.create_count(count_data, user.id)
+
+
+def test_create_and_get_first_count(db_session):
+    user, product, section, stock_session = seed_data(db_session)
+    service = CountService(db_session)
+
+    count = create_first_count(service, product, section, stock_session, user)
+    counts, total = service.get_first_counts(session_id=stock_session.id)
+
     assert count.product_id == product.id
-    assert count.section_id == section.id
+    assert count.shelf_section_id == section.id
     assert float(count.quantity) == 95.0
-
-
-def test_get_counts_by_section(count_service, db_session):
-    user, product, section, stock_session = seed_data(db_session)
-    count_data = CountCreate(
-        product_id=product.id,
-        section_id=section.id,
-        quantity=95.0,
-        session_id=stock_session.id,
-    )
-    count_service.create_count(count_data, user.id)
-    counts = count_service.get_counts_by_section(section.id, stock_session.id)
+    assert total == 1
     assert len(counts) == 1
 
 
-def test_create_count_product_not_found(count_service, db_session):
+def test_create_first_count_product_not_found(db_session):
     user, _, section, stock_session = seed_data(db_session)
-    count_data = CountCreate(
-        product_id=9999,
-        section_id=section.id,
-        quantity=95.0,
-        session_id=stock_session.id,
-    )
+    service = CountService(db_session)
+
     with pytest.raises(ValueError, match="Product not found"):
-        count_service.create_count(count_data, user.id)
+        service.create_first_count(
+            FirstCountCreate(
+                product_id=9999,
+                shelf_section_id=section.id,
+                quantity=95,
+                session_id=stock_session.id,
+                source="web",
+            ),
+            user.id,
+        )
 
 
-def test_delete_count(count_service, db_session):
+def test_delete_first_count(db_session):
     user, product, section, stock_session = seed_data(db_session)
-    count_data = CountCreate(
-        product_id=product.id,
-        section_id=section.id,
-        quantity=95.0,
-        session_id=stock_session.id,
-    )
-    count = count_service.create_count(count_data, user.id)
-    assert count_service.delete_count(count.id) is True
-    assert count_service.delete_count(count.id) is False
+    service = CountService(db_session)
+    count = create_first_count(service, product, section, stock_session, user)
+
+    assert service.delete_first_count(count.id) is True
+    assert service.delete_first_count(count.id) is False

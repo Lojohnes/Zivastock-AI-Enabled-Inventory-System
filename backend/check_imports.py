@@ -26,7 +26,7 @@ for f in files:
         sys.exit(1)
 
 try:
-    from app.models.count import Count, Duplicate
+    from app.models.count import FirstCount, SecondCount
     print("OK import app.models.count")
     from app.services.report_service import ReportService
     print("OK import app.services.report_service")

@@ -48,9 +48,11 @@ export const Layout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - 240px)` },
-          mt: '64px',
+          p: { xs: 1.5, sm: 2.5, lg: 3 },
+          width: { xs: '100%', sm: `calc(100% - 240px)` },
+          minWidth: 0,
+          mt: { xs: '56px', sm: '64px' },
+          overflowX: 'hidden',
         }}
       >
         <Outlet />

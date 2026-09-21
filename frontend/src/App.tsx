@@ -12,6 +12,9 @@ import { Import } from './pages/Import'
 import { Profile } from './pages/Profile'
 import { Settings } from './pages/Settings'
 import { Counts } from './pages/Counts'
+import { InventoryCommandCentre } from './pages/InventoryCommandCentre'
+import { ModelLaboratory } from './pages/ModelLaboratory'
+import { DemoPOS } from './pages/DemoPOS'
 
 function App() {
   return (
@@ -21,6 +24,9 @@ function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="command-centre" element={<InventoryCommandCentre />} />
+        <Route path="model-laboratory" element={<ModelLaboratory />} />
+        <Route path="demo-pos" element={<DemoPOS />} />
         <Route path="stocktake" element={<Stocktake />} />
         <Route path="products" element={<Products />} />
         <Route path="import" element={<Import />} />

@@ -11,6 +11,13 @@ from app.models.import_batch import ImportJob
 from app.models.export import ExportJob
 from app.models.report import Report
 from app.models.sync import SyncQueue
+from app.models.inventory_event import InventoryEvent
+from app.models.data_quality import DataQualityBatch, DataQualityIssue
+from app.models.inventory_feature import InventoryFeatureSnapshot
+from app.models.ml import ModelVersion, AnomalyResult
+from app.models.risk import InventoryRiskScore
+from app.models.forecast import ForecastResult, InventoryExposure
+from app.models.recommendation import AIRecommendation, RecommendationDecision, RecommendationOutcome
 
 __all__ = [
     "Base",
@@ -33,4 +40,16 @@ __all__ = [
     "ExportJob",
     "Report",
     "SyncQueue",
+    "InventoryEvent",
+    "DataQualityBatch",
+    "DataQualityIssue",
+    "InventoryFeatureSnapshot",
+    "ModelVersion",
+    "AnomalyResult",
+    "InventoryRiskScore",
+    "ForecastResult",
+    "InventoryExposure",
+    "AIRecommendation",
+    "RecommendationDecision",
+    "RecommendationOutcome",
 ]

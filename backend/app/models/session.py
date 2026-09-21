@@ -1,5 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, Text, DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, BigInteger, String, Text, DateTime, ForeignKey, Uuid
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid as uuid_lib
@@ -10,7 +9,7 @@ class StocktakeSession(Base):
     __tablename__ = "stocktake_sessions"
 
     id = Column(BigInteger, primary_key=True, index=True)
-    uuid = Column(UUID(as_uuid=True), unique=True, nullable=False, default=uuid_lib.uuid4)
+    uuid = Column(Uuid(as_uuid=True), unique=True, nullable=False, default=uuid_lib.uuid4)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     location_id = Column(BigInteger, ForeignKey("locations.id"), nullable=False, index=True)

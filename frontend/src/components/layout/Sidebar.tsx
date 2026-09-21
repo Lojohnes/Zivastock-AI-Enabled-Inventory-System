@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Divider } from '@mui/material'
-import { Dashboard, Inventory, Assignment, Report, People, Security, Logout, CloudUpload } from '@mui/icons-material'
+import { Dashboard, Inventory, Assignment, Report, People, Security, Logout, CloudUpload, AutoAwesome, Science, PointOfSale } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 interface SidebarProps {
@@ -16,6 +16,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onDrawerToggle }) 
 
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
+    { text: 'AI Command Centre', icon: <AutoAwesome />, path: '/command-centre' },
+    { text: 'AI Model Laboratory', icon: <Science />, path: '/model-laboratory' },
+    { text: 'Demo POS', icon: <PointOfSale />, path: '/demo-pos' },
     { text: 'Stocktake', icon: <Inventory />, path: '/stocktake' },
     { text: 'Products', icon: <Assignment />, path: '/products' },
     { text: 'Import Inventory', icon: <CloudUpload />, path: '/import' },

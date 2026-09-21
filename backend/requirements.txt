@@ -22,6 +22,7 @@ redis>=5.2.0
 
 # Data Processing
 pandas>=2.2.0
+scikit-learn>=1.5.0
 openpyxl>=3.1.2
 xlrd>=2.0.1
 xlsxwriter>=3.2.0

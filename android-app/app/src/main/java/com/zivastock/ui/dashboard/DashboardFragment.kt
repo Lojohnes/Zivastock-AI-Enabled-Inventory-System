@@ -77,6 +77,11 @@ class DashboardFragment : Fragment() {
                 R.string.dashboard_subtitle_variance_total,
                 decimalFormat.format(stats.totalVariance)
             )
+            binding.tvAiReadiness.text = if (stats.pendingSyncCount > 0) {
+                "${stats.pendingSyncCount} local change(s) waiting to sync. Sync before reviewing AI risk and forecast results."
+            } else {
+                "Counts are synchronised. Central AI anomaly, risk and forecast analysis is ready when the server pipeline has processed the data."
+            }
         }
 
         viewModel.chartData.observe(viewLifecycleOwner) { data ->
