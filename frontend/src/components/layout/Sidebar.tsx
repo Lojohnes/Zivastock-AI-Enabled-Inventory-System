@@ -2,6 +2,7 @@ import React from 'react'
 import { Box, Drawer, IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Divider, Tooltip } from '@mui/material'
 import { Dashboard, Inventory, Assignment, Report, People, Security, Logout, CloudUpload, AutoAwesome, Science, PointOfSale, ManageSearch, ChevronLeft, ChevronRight } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useAppSelector } from '../../hooks/redux'
 
 interface SidebarProps {
   mobileOpen: boolean
@@ -16,13 +17,15 @@ const collapsedWidth = 72
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, collapsed, onDrawerToggle, onCollapseToggle }) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const user = useAppSelector((state) => state.auth.user)
+  const canViewAudit = user?.permissions?.includes('reports.view_audit')
 
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
     { text: 'AI Command Centre', icon: <AutoAwesome />, path: '/command-centre' },
     { text: 'AI Model Laboratory', icon: <Science />, path: '/model-laboratory' },
     { text: 'Demo POS', icon: <PointOfSale />, path: '/demo-pos' },
-    { text: 'Audit Trail', icon: <ManageSearch />, path: '/audit' },
+    ...(canViewAudit ? [{ text: 'Audit Trail', icon: <ManageSearch />, path: '/audit' }] : []),
     { text: 'Stocktake', icon: <Inventory />, path: '/stocktake' },
     { text: 'Products', icon: <Assignment />, path: '/products' },
     { text: 'Import Inventory', icon: <CloudUpload />, path: '/import' },

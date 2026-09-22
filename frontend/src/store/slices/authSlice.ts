@@ -9,6 +9,7 @@ interface User {
   phone_number?: string | null
   profile_picture?: string | null
   role_id: number
+  permissions?: string[]
   is_active: boolean
 }
 

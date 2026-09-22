@@ -17,6 +17,7 @@ import {
 } from '@mui/material'
 import { Refresh, Security } from '@mui/icons-material'
 import api from '../services/api'
+import { useAppSelector } from '../hooks/redux'
 
 interface AuditAction {
   action: string
@@ -30,6 +31,8 @@ interface AuditAction {
 }
 
 export const AuditTrail: React.FC = () => {
+  const user = useAppSelector((state) => state.auth.user)
+  const canViewAudit = user?.permissions?.includes('reports.view_audit')
   const [actions, setActions] = useState<AuditAction[]>([])
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -37,6 +40,10 @@ export const AuditTrail: React.FC = () => {
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
+    if (!canViewAudit) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -52,9 +59,13 @@ export const AuditTrail: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [startDate, endDate])
+  }, [canViewAudit, startDate, endDate])
 
   useEffect(() => { void load() }, [load])
+
+  if (!canViewAudit) {
+    return <Alert severity="error">You do not have permission to view the audit trail.</Alert>
+  }
 
   return (
     <Box>
