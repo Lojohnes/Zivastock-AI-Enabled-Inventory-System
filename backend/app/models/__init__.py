@@ -18,6 +18,7 @@ from app.models.ml import ModelVersion, AnomalyResult
 from app.models.risk import InventoryRiskScore
 from app.models.forecast import ForecastResult, InventoryExposure
 from app.models.recommendation import AIRecommendation, RecommendationDecision, RecommendationOutcome
+from app.models.analysis_run import AnalysisRun
 
 __all__ = [
     "Base",
@@ -52,4 +53,5 @@ __all__ = [
     "AIRecommendation",
     "RecommendationDecision",
     "RecommendationOutcome",
+    "AnalysisRun",
 ]

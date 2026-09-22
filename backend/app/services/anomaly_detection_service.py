@@ -85,6 +85,7 @@ class AnomalyDetectionService:
         dataset_version: Optional[str] = None,
         feature_set_version: Optional[str] = None,
         created_by: Optional[int] = None,
+        analysis_key: Optional[str] = None,
     ) -> dict:
         if not self.db:
             raise ValueError("A database session is required to persist anomaly results")
@@ -112,6 +113,7 @@ class AnomalyDetectionService:
             self.db.flush()
             for row in result.to_dict("records"):
                 self.db.add(AnomalyResult(
+                    analysis_key=analysis_key,
                     product_id=int(row["product_id"]),
                     location_id=self._optional_int(row.get("location_id")),
                     feature_date=self._date_value(row["feature_date"]),

@@ -10,6 +10,7 @@ class AIRecommendation(Base):
     __tablename__ = "ai_recommendations"
 
     id = Column(BigInteger, primary_key=True, index=True)
+    analysis_key = Column(String(100), nullable=True, index=True)
     product_id = Column(BigInteger, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
     location_id = Column(BigInteger, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True, index=True)
     recommendation_type = Column(String(40), nullable=False, index=True)

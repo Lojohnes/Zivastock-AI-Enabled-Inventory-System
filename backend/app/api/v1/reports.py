@@ -4,10 +4,23 @@ from typing import Optional
 from datetime import datetime
 from app.core.database import get_db
 from app.services.report_service import ReportService
+from app.services.stocktake_analysis_service import StocktakeAnalysisService
 from app.models.user import User
 from app.api.deps import get_current_user_id, require_permission
 
 router = APIRouter()
+
+
+@router.post("/sessions/{session_id}/analyze-ai")
+def analyze_stocktake_with_ai(
+    session_id: int,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    try:
+        return StocktakeAnalysisService(db).analyze_session(session_id, user_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 @router.get("/variance")

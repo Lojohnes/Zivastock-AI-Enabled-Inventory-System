@@ -49,6 +49,7 @@ def db_session():
         "ai_recommendations",
         "recommendation_decisions",
         "recommendation_outcomes",
+        "analysis_runs",
     }
     tables = [table for table in Base.metadata.sorted_tables if table.name in table_names]
     Base.metadata.create_all(bind=connection, tables=tables)

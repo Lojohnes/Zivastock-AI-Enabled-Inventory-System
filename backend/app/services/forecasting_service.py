@@ -180,11 +180,12 @@ class ForecastingService:
             "stockout_risk": self._stockout_risk(days_until_stockout),
         }
 
-    def persist_forecasts(self, forecasts: pd.DataFrame, model_version_id: Optional[int] = None) -> int:
+    def persist_forecasts(self, forecasts: pd.DataFrame, model_version_id: Optional[int] = None, analysis_key: Optional[str] = None) -> int:
         if not self.db:
             raise ValueError("A database session is required")
         for row in forecasts.to_dict("records"):
             self.db.add(ForecastResult(
+                analysis_key=analysis_key,
                 product_id=int(row["product_id"]),
                 location_id=self._optional_int(row.get("location_id")),
                 model_version_id=model_version_id,
@@ -199,11 +200,12 @@ class ForecastingService:
         self.db.commit()
         return len(forecasts)
 
-    def persist_exposure(self, exposure: pd.DataFrame) -> int:
+    def persist_exposure(self, exposure: pd.DataFrame, analysis_key: Optional[str] = None) -> int:
         if not self.db:
             raise ValueError("A database session is required")
         for row in exposure.to_dict("records"):
             self.db.add(InventoryExposure(
+                analysis_key=analysis_key,
                 product_id=int(row["product_id"]),
                 location_id=self._optional_int(row.get("location_id")),
                 calculation_date=self._date_value(row["calculation_date"]),

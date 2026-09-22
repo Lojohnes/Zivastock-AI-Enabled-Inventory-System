@@ -311,6 +311,18 @@ class ReportService:
         )
 
         session_progress = self.get_session_progress()
+        dashboard_sessions = [
+            {
+                "id": row.get("session_id"),
+                "name": row.get("session_name") or "Unnamed session",
+                "location": row.get("location_name") or "Unknown location",
+                "status": row.get("status") or "not_started",
+                "counted_sections": row.get("sections_first_counted") or 0,
+                "active_users": row.get("active_counters") or 0,
+                "created_at": row.get("start_time") or row.get("end_time"),
+            }
+            for row in session_progress[:10]
+        ]
 
         return {
             "generated_at": datetime.utcnow().isoformat(),
@@ -329,5 +341,5 @@ class ReportService:
                 ) if total_sections > 0 else 0,
                 "recent_counts_24h": recent_counts,
             },
-            "sessions": session_progress[:10],
+            "sessions": dashboard_sessions,
         }

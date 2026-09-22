@@ -19,7 +19,7 @@ import {
   TableRow,
   TableContainer,
 } from '@mui/material'
-import { Download } from '@mui/icons-material'
+import { AutoAwesome, Download } from '@mui/icons-material'
 import * as XLSX from 'xlsx'
 import api from '../services/api'
 
@@ -36,6 +36,8 @@ export const Reports: React.FC = () => {
   const [sessions, setSessions] = useState<{ id: number; name: string; status: string }[]>([])
   const [data, setData] = useState<unknown>(null)
   const [loading, setLoading] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState<{ message: string; risk_scores: number; recommendations: number } | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -61,6 +63,24 @@ export const Reports: React.FC = () => {
       setError(err.response?.data?.detail || 'Failed to generate report')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleAnalyzeWithAI = async () => {
+    if (!sessionId) {
+      setError('Please select a session first')
+      return
+    }
+    setAiLoading(true)
+    setError('')
+    setAiResult(null)
+    try {
+      const response = await api.post(`/reports/sessions/${Number(sessionId)}/analyze-ai`)
+      setAiResult(response.data)
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to analyze stocktake with AI')
+    } finally {
+      setAiLoading(false)
     }
   }
 
@@ -181,6 +201,16 @@ export const Reports: React.FC = () => {
             {loading ? <CircularProgress size={24} /> : 'Generate'}
           </Button>
 
+          <Button
+            variant="outlined"
+            color="secondary"
+            startIcon={<AutoAwesome />}
+            onClick={handleAnalyzeWithAI}
+            disabled={!sessionId || aiLoading}
+          >
+            {aiLoading ? <CircularProgress size={22} /> : 'Analyze in AI'}
+          </Button>
+
           {data != null ? (
             <>
               <Button variant="outlined" startIcon={<Download />} onClick={handleExportExcel} color="success">
@@ -194,6 +224,9 @@ export const Reports: React.FC = () => {
         </Box>
 
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+        {aiResult && <Alert severity="success" sx={{ mt: 2 }}>
+          {aiResult.message} Risk scores: {aiResult.risk_scores}; recommendations: {aiResult.recommendations}. Open the AI Command Centre to review.
+        </Alert>}
       </Paper>
 
       {data != null ? renderReportTable() : null}

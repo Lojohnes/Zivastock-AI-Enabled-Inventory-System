@@ -113,11 +113,12 @@ class RecommendationService:
                 })
         return pd.DataFrame(rows)
 
-    def persist(self, recommendations: pd.DataFrame, model_version_id: Optional[int] = None) -> int:
+    def persist(self, recommendations: pd.DataFrame, model_version_id: Optional[int] = None, analysis_key: Optional[str] = None) -> int:
         if not self.db:
             raise ValueError("A database session is required")
         for row in recommendations.to_dict("records"):
             self.db.add(AIRecommendation(
+                analysis_key=analysis_key,
                 product_id=int(row["product_id"]),
                 location_id=self._optional_int(row.get("location_id")),
                 recommendation_type=row["recommendation_type"],

@@ -71,6 +71,9 @@ export const InventoryCommandCentre: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
+    setData(null)
+    setSelectedProduct(null)
+    setSelectedRecommendation(null)
     try {
       setData(await fetchCommandCentre(10))
     } catch (err: any) {

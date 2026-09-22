@@ -10,6 +10,7 @@ class ForecastResult(Base):
     __tablename__ = "forecast_results"
 
     id = Column(BigInteger, primary_key=True, index=True)
+    analysis_key = Column(String(100), nullable=True, index=True)
     product_id = Column(BigInteger, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
     location_id = Column(BigInteger, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True, index=True)
     model_version_id = Column(BigInteger, ForeignKey("model_versions.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -31,6 +32,7 @@ class InventoryExposure(Base):
     __tablename__ = "inventory_exposures"
 
     id = Column(BigInteger, primary_key=True, index=True)
+    analysis_key = Column(String(100), nullable=True, index=True)
     product_id = Column(BigInteger, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
     location_id = Column(BigInteger, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True, index=True)
     calculation_date = Column(Date, nullable=False, index=True)

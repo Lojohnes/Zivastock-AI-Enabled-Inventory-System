@@ -15,6 +15,7 @@ import { Counts } from './pages/Counts'
 import { InventoryCommandCentre } from './pages/InventoryCommandCentre'
 import { ModelLaboratory } from './pages/ModelLaboratory'
 import { DemoPOS } from './pages/DemoPOS'
+import { AuditTrail } from './pages/AuditTrail'
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="command-centre" element={<InventoryCommandCentre />} />
         <Route path="model-laboratory" element={<ModelLaboratory />} />
         <Route path="demo-pos" element={<DemoPOS />} />
+        <Route path="audit" element={<AuditTrail />} />
         <Route path="stocktake" element={<Stocktake />} />
         <Route path="products" element={<Products />} />
         <Route path="import" element={<Import />} />

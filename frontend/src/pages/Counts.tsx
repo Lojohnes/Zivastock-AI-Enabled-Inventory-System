@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Alert, Box, Button, FormControl, InputLabel, MenuItem, Paper, Select, Tab, Tabs, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
 import * as XLSX from 'xlsx'
+import { AutoAwesome } from '@mui/icons-material'
 import api from '../services/api'
 
 const tabs = [
@@ -17,6 +18,8 @@ export const Counts: React.FC = () => {
   const [fileNumber, setFileNumber] = useState('')
   const [sectionNumber, setSectionNumber] = useState('')
   const [rows, setRows] = useState<Record<string, unknown>[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState<{ message: string; risk_scores: number; recommendations: number } | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -32,6 +35,21 @@ export const Counts: React.FC = () => {
       setRows(response.data[config.key] || [])
     } catch (e: any) {
       setError(e.response?.data?.detail || 'Unable to generate counts report')
+    }
+  }
+
+  const analyzeWithAI = async () => {
+    if (!sessionId) return setError('Select a session first')
+    setAiLoading(true)
+    setError('')
+    setAiResult(null)
+    try {
+      const response = await api.post(`/reports/sessions/${Number(sessionId)}/analyze-ai`)
+      setAiResult(response.data)
+    } catch (e: any) {
+      setError(e.response?.data?.detail || 'Unable to analyze stocktake with AI')
+    } finally {
+      setAiLoading(false)
     }
   }
 
@@ -62,10 +80,12 @@ export const Counts: React.FC = () => {
           <TextField label="File No" value={fileNumber} onChange={(e) => setFileNumber(e.target.value)} />
           <TextField label="Section No" value={sectionNumber} onChange={(e) => setSectionNumber(e.target.value)} />
           <Button variant="contained" onClick={generate}>Generate</Button>
+          <Button variant="outlined" color="secondary" startIcon={<AutoAwesome />} onClick={analyzeWithAI} disabled={!sessionId || aiLoading}>{aiLoading ? 'Analyzing…' : 'Analyze in AI'}</Button>
           <Button variant="outlined" onClick={exportExcel} disabled={!rows.length}>Export Excel</Button>
           <Button variant="outlined" onClick={() => window.print()} disabled={!rows.length}>Print / Save PDF</Button>
         </Box>
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+        {aiResult && <Alert severity="success" sx={{ mt: 2 }}>{aiResult.message} Risk scores: {aiResult.risk_scores}; recommendations: {aiResult.recommendations}. Open the AI Command Centre.</Alert>}
       </Paper>
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>{tabs[tab].label} — {rows.length} records</Typography>

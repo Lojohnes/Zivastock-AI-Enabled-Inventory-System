@@ -69,12 +69,13 @@ class InventoryRiskService:
         result["calculation_version"] = self.calculation_version
         return result
 
-    def persist(self, scores: pd.DataFrame) -> int:
+    def persist(self, scores: pd.DataFrame, analysis_key: Optional[str] = None) -> int:
         if not self.db:
             raise ValueError("A database session is required to persist risk scores")
         count = 0
         for row in scores.to_dict("records"):
             self.db.add(InventoryRiskScore(
+                analysis_key=analysis_key,
                 product_id=int(row["product_id"]),
                 location_id=self._optional_int(row.get("location_id")),
                 calculation_date=self._date_value(row["feature_date"]),

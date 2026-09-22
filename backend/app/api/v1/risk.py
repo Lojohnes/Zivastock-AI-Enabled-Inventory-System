@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_id
+from app.models.analysis_run import AnalysisRun
 from app.models.data_quality import DataQualityBatch
 from app.models.forecast import InventoryExposure
 from app.models.product import Product
@@ -64,18 +65,50 @@ def get_command_centre(
     user_id: int = Depends(get_current_user_id),
 ):
     del user_id
-    scores = db.query(InventoryRiskScore).order_by(InventoryRiskScore.total_score.desc()).limit(limit).all()
-    exposures = db.query(InventoryExposure).order_by(InventoryExposure.stockout_risk.desc(), InventoryExposure.days_until_stockout.asc()).limit(limit).all()
-    recommendations = db.query(AIRecommendation).filter(AIRecommendation.status == "PENDING").order_by(AIRecommendation.priority, AIRecommendation.created_at.desc()).limit(limit).all()
+    latest_run = db.query(AnalysisRun).order_by(AnalysisRun.started_at.desc()).first()
+    analysis_key = latest_run.analysis_key if latest_run else None
+    score_query = db.query(InventoryRiskScore)
+    exposure_query = db.query(InventoryExposure)
+    recommendation_query = db.query(AIRecommendation).filter(AIRecommendation.status == "PENDING")
+    if analysis_key:
+        score_query = score_query.filter(InventoryRiskScore.analysis_key == analysis_key)
+        exposure_query = exposure_query.filter(InventoryExposure.analysis_key == analysis_key)
+        recommendation_query = recommendation_query.filter(AIRecommendation.analysis_key == analysis_key)
+    score_rows = score_query.order_by(InventoryRiskScore.created_at.desc()).all()
+    latest_scores = {}
+    for score in score_rows:
+        key = (score.product_id, score.location_id)
+        if key not in latest_scores:
+            latest_scores[key] = score
+    scores = sorted(latest_scores.values(), key=lambda item: float(item.total_score), reverse=True)[:limit]
+
+    exposure_rows = exposure_query.order_by(InventoryExposure.created_at.desc()).all()
+    latest_exposures = {}
+    for exposure in exposure_rows:
+        key = (exposure.product_id, exposure.location_id)
+        if key not in latest_exposures:
+            latest_exposures[key] = exposure
+    exposures = sorted(
+        latest_exposures.values(),
+        key=lambda item: (item.stockout_risk, float(item.days_until_stockout or 999999)),
+    )[:limit]
+
+    recommendation_rows = recommendation_query.order_by(AIRecommendation.created_at.desc()).all()
+    latest_recommendations = {}
+    for recommendation in recommendation_rows:
+        key = (recommendation.product_id, recommendation.recommendation_type)
+        if key not in latest_recommendations:
+            latest_recommendations[key] = recommendation
+    recommendations = list(latest_recommendations.values())[:limit]
     latest_quality = db.query(DataQualityBatch).order_by(DataQualityBatch.created_at.desc()).first()
     return {
         "summary": {
-            "total_products": db.query(InventoryRiskScore.product_id).distinct().count(),
-            "critical_risks": db.query(InventoryRiskScore).filter(InventoryRiskScore.risk_level == "CRITICAL").count(),
-            "high_risks": db.query(InventoryRiskScore).filter(InventoryRiskScore.risk_level == "HIGH").count(),
-            "stockout_risks": db.query(InventoryExposure).filter(InventoryExposure.stockout_risk.in_(["HIGH", "CRITICAL"])).count(),
-            "excess_inventory": db.query(InventoryExposure).filter(InventoryExposure.excess_quantity > 0).count(),
-            "pending_recommendations": db.query(AIRecommendation).filter(AIRecommendation.status == "PENDING").count(),
+            "total_products": score_query.with_entities(InventoryRiskScore.product_id).distinct().count(),
+            "critical_risks": score_query.filter(InventoryRiskScore.risk_level == "CRITICAL").count(),
+            "high_risks": score_query.filter(InventoryRiskScore.risk_level == "HIGH").count(),
+            "stockout_risks": exposure_query.filter(InventoryExposure.stockout_risk.in_(["HIGH", "CRITICAL"])).count(),
+            "excess_inventory": exposure_query.filter(InventoryExposure.excess_quantity > 0).count(),
+            "pending_recommendations": recommendation_query.count(),
             "data_quality_score": float(latest_quality.quality_score) if latest_quality else None,
         },
         "top_risks": [_risk_record(score) for score in scores],
@@ -108,9 +141,18 @@ def get_product_intelligence(
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    scores = db.query(InventoryRiskScore).filter(InventoryRiskScore.product_id == product_id).order_by(InventoryRiskScore.created_at.desc()).limit(10).all()
-    exposures = db.query(InventoryExposure).filter(InventoryExposure.product_id == product_id).order_by(InventoryExposure.created_at.desc()).limit(10).all()
-    recommendations = db.query(AIRecommendation).filter(AIRecommendation.product_id == product_id).order_by(AIRecommendation.created_at.desc()).limit(20).all()
+    latest_run = db.query(AnalysisRun).order_by(AnalysisRun.started_at.desc()).first()
+    analysis_key = latest_run.analysis_key if latest_run else None
+    score_query = db.query(InventoryRiskScore).filter(InventoryRiskScore.product_id == product_id)
+    exposure_query = db.query(InventoryExposure).filter(InventoryExposure.product_id == product_id)
+    recommendation_query = db.query(AIRecommendation).filter(AIRecommendation.product_id == product_id)
+    if analysis_key:
+        score_query = score_query.filter(InventoryRiskScore.analysis_key == analysis_key)
+        exposure_query = exposure_query.filter(InventoryExposure.analysis_key == analysis_key)
+        recommendation_query = recommendation_query.filter(AIRecommendation.analysis_key == analysis_key)
+    scores = score_query.order_by(InventoryRiskScore.created_at.desc()).limit(10).all()
+    exposures = exposure_query.order_by(InventoryExposure.created_at.desc()).limit(10).all()
+    recommendations = recommendation_query.order_by(AIRecommendation.created_at.desc()).limit(20).all()
     return {
         "product": {"id": product.id, "barcode": product.barcode, "description": product.description, "unit_cost": float(product.unit_cost or 0)},
         "risk_scores": [_risk_record(score) for score in scores],

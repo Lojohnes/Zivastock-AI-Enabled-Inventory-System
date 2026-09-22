@@ -1,6 +1,11 @@
+from uuid import uuid4
+
 import pandas as pd
+from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 
+from app.models.analysis_run import AnalysisRun
+from app.models.audit import AuditTrail
 from app.models.location import Location
 from app.models.product import Product
 from app.services.anomaly_detection_service import AnomalyDetectionService
@@ -31,6 +36,16 @@ class DemoPipelineService:
             frame,
             source_system="demo_pos",
         )
+        analysis_key = f"demo-{scenario}-{seed}-{uuid4().hex}"
+        analysis_run = AnalysisRun(
+            analysis_key=analysis_key,
+            analysis_type="DEMO_POS",
+            reference_id=f"{scenario}:{seed}",
+            status="RUNNING",
+            created_by=user_id,
+        )
+        self.db.add(analysis_run)
+        self.db.flush()
         feature_date = frame["event_timestamp"].max().date()
         features = FeatureEngineeringService().build_snapshots(frame, feature_date, lookback_days=min(days, 30))
         anomaly_outputs = AnomalyDetectionService(self.db).run_and_persist(
@@ -39,19 +54,20 @@ class DemoPipelineService:
             dataset_version=f"demo-{scenario}-{seed}",
             feature_set_version="v1",
             created_by=user_id,
+            analysis_key=analysis_key,
         )
         anomaly = anomaly_outputs["isolation_forest"]
 
         risk_service = InventoryRiskService(self.db)
         risk = risk_service.calculate(features, anomaly)
-        risk_count = risk_service.persist(risk)
+        risk_count = risk_service.persist(risk, analysis_key=analysis_key)
 
         forecast_service = ForecastingService(self.db)
         forecasts, comparison = forecast_service.forecast(frame, feature_date, horizon_days=7, validation_horizon=7)
-        forecast_count = forecast_service.persist_forecasts(forecasts)
+        forecast_count = forecast_service.persist_forecasts(forecasts, analysis_key=analysis_key)
         inventory = features[["product_id", "location_id", "current_quantity"]]
         exposure = forecast_service.exposure(forecasts, inventory, feature_date)
-        exposure_count = forecast_service.persist_exposure(exposure)
+        exposure_count = forecast_service.persist_exposure(exposure, analysis_key=analysis_key)
 
         combined = risk.merge(
             exposure[[
@@ -62,9 +78,21 @@ class DemoPipelineService:
             how="left",
         )
         recommendations = RecommendationService(self.db).generate(combined)
-        recommendation_count = RecommendationService(self.db).persist(recommendations)
+        recommendation_count = RecommendationService(self.db).persist(recommendations, analysis_key=analysis_key)
+        analysis_run.status = "COMPLETED"
+        analysis_run.completed_at = pd.Timestamp.utcnow().to_pydatetime()
+        if "audit_trail" in inspect(self.db.bind).get_table_names():
+            self.db.add(AuditTrail(
+                user_id=user_id,
+                action="INSERT",
+                entity_type="AI_ANALYSIS_RUN",
+                entity_id=analysis_run.id,
+                new_value={"analysis_key": analysis_key, "analysis_type": "DEMO_POS", "scenario": scenario, "seed": seed},
+            ))
+        self.db.commit()
 
-        return {
+        return {"analysis_key": analysis_key,
+
             "scenario": scenario,
             "seed": seed,
             "days": days,
